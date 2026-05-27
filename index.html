@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dessins</title>
+<style>
+body {
+  margin: 0 auto;
+  padding: 0;
+  max-width: 900px;
+  background-color: #fcfcfc;
+  font-family: monospace;
+}
+
+.column img {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+}
+
+#viewer-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #fcfcfc;
+}
+#viewer-overlay.active { display: flex; flex-direction: column; }
+
+#viewer-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.4em 1em;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+#viewer-bar button {
+  background: none;
+  border: none;
+  font-family: monospace;
+  font-size: 14px;
+  color: #286c44;
+  cursor: pointer;
+  padding: 0.2em 0.6em;
+}
+#viewer-bar button:hover { color: #111; }
+
+#viewer-nav {
+  display: flex;
+  gap: 0.4em;
+  align-items: center;
+}
+#viewer-nav .counter {
+  font-variant-numeric: tabular-nums;
+  min-width: 4em;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
+#osd-container { flex: 1; min-height: 0; }
+
+.error { padding: 2em; color: #900; }
+</style>
+</head>
+<body>
+
+<div class="column" id="column"></div>
+
+<div id="viewer-overlay">
+  <div id="viewer-bar">
+    <div id="viewer-nav">
+      <button id="btn-prev">←</button>
+      <span class="counter" id="viewer-counter"></span>
+      <button id="btn-next">→</button>
+      <button id="btn-close">✕</button>
+    </div>
+  </div>
+  <div id="osd-container"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.1/openseadragon.min.js"></script>
+<script>
+(function () {
+  var manifest = [];
+  var viewer = null;
+  var currentIndex = -1;
+
+  fetch('manifest.json')
+    .then(function (r) { return r.json(); })
+    .then(function (data) { manifest = data; buildColumn(); })
+    .catch(function (err) {
+      document.getElementById('column').innerHTML =
+        '<p class="error">Erreur : impossible de charger manifest.json (' + err.message + ')</p>';
+    });
+
+  function buildColumn() {
+    var col = document.getElementById('column');
+    for (var i = 0; i < manifest.length; i++) {
+      (function (idx) {
+        var img = document.createElement('img');
+        img.src = manifest[idx].thumb;
+        img.alt = manifest[idx].id;
+        img.loading = 'lazy';
+        img.addEventListener('click', function () { openViewer(idx); });
+        col.appendChild(img);
+      })(i);
+    }
+  }
+
+  function openViewer(index) {
+    document.getElementById('viewer-overlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    if (!viewer) {
+      viewer = OpenSeadragon({
+        id: 'osd-container',
+        prefixUrl: 'https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.1/images/',
+        showNavigationControl: false,
+        showNavigator: false,
+        animationTime: 0.3,
+        blendTime: 0.1,
+        minZoomImageRatio: 0.8,
+        maxZoomPixelRatio: 4,
+        gestureSettingsMouse: { scrollToZoom: true, clickToZoom: true, dblClickToZoom: true },
+        gestureSettingsTouch: { pinchToZoom: true, flickEnabled: true },
+      });
+    }
+    loadImage(index);
+  }
+
+  function loadImage(index) {
+    if (index < 0 || index >= manifest.length) return;
+    currentIndex = index;
+    document.getElementById('viewer-counter').textContent =
+      (index + 1) + '\u2009/\u2009' + manifest.length;
+    viewer.open(manifest[index].dzi);
+  }
+
+  function closeViewer() {
+    document.getElementById('viewer-overlay').classList.remove('active');
+    document.body.style.overflow = '';
+    if (viewer) viewer.close();
+    currentIndex = -1;
+  }
+
+  function nav(d) {
+    var n = currentIndex + d;
+    if (n >= 0 && n < manifest.length) loadImage(n);
+  }
+
+  document.getElementById('btn-close').addEventListener('click', closeViewer);
+  document.getElementById('btn-prev').addEventListener('click', function () { nav(-1); });
+  document.getElementById('btn-next').addEventListener('click', function () { nav(1); });
+  document.addEventListener('keydown', function (e) {
+    if (currentIndex < 0) return;
+    if (e.key === 'Escape') closeViewer();
+    else if (e.key === 'ArrowLeft') nav(-1);
+    else if (e.key === 'ArrowRight') nav(1);
+  });
+})();
+</script>
+</body>
+</html>
