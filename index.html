@@ -149,15 +149,49 @@ body {
     });
   }
 
+  // The tiles on disk form a "tile-grid" pyramid: levels are halved until the
+  // image fits in a single 256px tile (~level 6 here), rather than the standard
+  // Deep Zoom "pixel" pyramid that halves all the way down to 1px (level 14 for
+  // these 15502px images). Reading the .dzi directly makes OpenSeadragon request
+  // non-existent levels (7-14) and the viewer stays blank. Build a custom tile
+  // source that remaps OpenSeadragon's level numbers onto the stored ones and
+  // skips the levels that were never generated.
+  var TILE_SIZE = 256;
+  var TILE_OVERLAP = 1;
+
+  function makeTileSource(item) {
+    var base = item.dzi.replace(/\.dzi$/, '') + '_files';
+    var width = item.width;
+    var height = item.height;
+    var maxLevel = Math.ceil(Math.log2(Math.max(width, height)));
+    var diskTop = Math.ceil(Math.log2(Math.max(
+      Math.ceil(width / TILE_SIZE),
+      Math.ceil(height / TILE_SIZE)
+    )));
+    var offset = maxLevel - diskTop; // levels not stored on disk
+
+    return {
+      width: width,
+      height: height,
+      tileSize: TILE_SIZE,
+      tileOverlap: TILE_OVERLAP,
+      minLevel: offset,
+      maxLevel: maxLevel,
+      getTileUrl: function (level, x, y) {
+        return base + '/' + (level - offset) + '/' + x + '_' + y + '.webp';
+      }
+    };
+  }
+
   function loadImage(index) {
     if (index < 0 || index >= manifest.length) return;
     currentIndex = index;
     document.getElementById('viewer-counter').textContent =
       (index + 1) + '\u2009/\u2009' + manifest.length;
 
-    var dzi = manifest[index].dzi;
-    console.log('Opening DZI:', dzi);
-    viewer.open(dzi);
+    var item = manifest[index];
+    console.log('Opening image:', item.id);
+    viewer.open(makeTileSource(item));
   }
 
   function closeViewer() {
