@@ -38,11 +38,12 @@ body {
 
 .grid img:hover { opacity: 0.85; }
 
-/* Column count steps with the viewport, 1 up to 6. The thresholds keep the
+/* Column count steps with the viewport, 1 up to 6, but only through divisors
+   of 30 so every row comes out full. 4 is skipped: it would leave a last row
+   of 2 against 7 full ones. That leaves 1, 2, 3, 5, 6. Thresholds keep the
    thumbnails at a usable size rather than dividing the width evenly. */
 @media (min-width: 380px) { body { --cols: 2; } }
 @media (min-width: 520px) { body { --cols: 3; } }
-@media (min-width: 700px) { body { --cols: 4; } }
 @media (min-width: 900px) { body { --cols: 5; } }
 
 @media (min-width: 1080px) {
