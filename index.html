@@ -6,17 +6,61 @@
 <title>Dessins</title>
 <style>
 body {
-  margin: 0 auto;
-  padding: 0;
-  max-width: 900px;
+  --pad: 0.4em;
+  --gap: 0.3em;
+  --cols: 1;
+  margin: 0;
+  padding: var(--pad);
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
   background-color: #fcfcfc;
   font-family: monospace;
 }
 
-.column img {
+.grid {
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: var(--gap);
+  width: 100%;
+}
+
+.grid img {
   display: block;
   width: 100%;
+  /* All 30 drawings share this ratio, so the rows stay even and the cells
+     hold their shape before the thumbnails have loaded. */
+  aspect-ratio: 15502 / 10925;
+  object-fit: cover;
   cursor: pointer;
+}
+
+.grid img:hover { opacity: 0.85; }
+
+/* Column count steps with the viewport, 1 up to 6, but only through divisors
+   of 30 so every row comes out full. 4 is skipped: it would leave a last row
+   of 2 against 7 full ones. That leaves 1, 2, 3, 5, 6. Thresholds keep the
+   thumbnails at a usable size rather than dividing the width evenly. */
+@media (min-width: 380px) { body { --cols: 2; } }
+@media (min-width: 520px) { body { --cols: 3; } }
+@media (min-width: 900px) { body { --cols: 5; } }
+
+@media (min-width: 1080px) {
+  body { --cols: 6; --pad: 1em; --gap: 0.6em; }
+
+  /* At 6 columns the set is 6x5, which is the one arrangement that can fit a
+     laptop screen whole. Cap the width at the widest 6x5 whose height still
+     clears the viewport, so it never scrolls: for a grid of width W the five
+     rows come to (W - 5*gap) / 6 / 1.4189 * 5 + 4*gap, and solving that
+     against the available height gives the expression below. Wider monitors
+     stop at 1800px so the drawings don't become billboards. */
+  .grid {
+    max-width: min(
+      1800px,
+      calc((100dvh - 2 * var(--pad) - 4 * var(--gap)) * 1.7027 + 5 * var(--gap))
+    );
+  }
 }
 
 #viewer-overlay {
@@ -71,7 +115,7 @@ body {
 </head>
 <body>
 
-<div class="column" id="column"></div>
+<div class="grid" id="grid"></div>
 
 <div id="viewer-overlay">
   <div id="viewer-bar">
@@ -100,15 +144,15 @@ body {
     .then(function (data) {
       manifest = data;
       console.log('Manifest loaded:', manifest.length, 'items');
-      buildColumn();
+      buildGrid();
     })
     .catch(function (err) {
-      document.getElementById('column').innerHTML =
+      document.getElementById('grid').innerHTML =
         '<p class="error">Erreur : ' + err.message + '</p>';
     });
 
-  function buildColumn() {
-    var col = document.getElementById('column');
+  function buildGrid() {
+    var col = document.getElementById('grid');
     for (var i = 0; i < manifest.length; i++) {
       (function (idx) {
         var img = document.createElement('img');
