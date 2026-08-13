@@ -5,50 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dessins</title>
 <style>
-html, body { height: 100%; }
-
 body {
-  --pad: 1em;
+  --pad: 0.4em;
+  --gap: 0.3em;
+  --cols: 1;
   margin: 0;
   padding: var(--pad);
   box-sizing: border-box;
-  height: 100dvh;
-  overflow: hidden;
+  min-height: 100dvh;
   display: flex;
   background-color: #fcfcfc;
   font-family: monospace;
 }
 
-/* 30 drawings, all 1.4189:1 — an exact 6x5 grid sized to fit the viewport.
-   The grid keeps the drawings' own proportions (6 wide by 5 tall) and takes
-   the full width only when the height allows it, so the page never scrolls. */
 .grid {
-  --ratio: calc((6 * 15502) / (5 * 10925));
-  --avail-height: calc(100dvh - 2 * var(--pad));
   margin: auto;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: repeat(5, 1fr);
-  gap: 0.6em;
-  width: min(100%, var(--avail-height) * var(--ratio));
-  aspect-ratio: var(--ratio);
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: var(--gap);
+  width: 100%;
 }
 
 .grid img {
   display: block;
   width: 100%;
-  height: 100%;
-  /* contain, not cover: when the window's shape forces the cells off the
-     drawings' ratio the art letterboxes instead of being cropped. */
-  object-fit: contain;
+  /* All 30 drawings share this ratio, so the rows stay even and the cells
+     hold their shape before the thumbnails have loaded. */
+  aspect-ratio: 15502 / 10925;
+  object-fit: cover;
   cursor: pointer;
 }
 
 .grid img:hover { opacity: 0.85; }
 
-@media (max-width: 700px) {
-  body { --pad: 0.4em; }
-  .grid { gap: 0.3em; }
+/* Column count steps with the viewport, 1 up to 6. The thresholds keep the
+   thumbnails at a usable size rather than dividing the width evenly. */
+@media (min-width: 380px) { body { --cols: 2; } }
+@media (min-width: 520px) { body { --cols: 3; } }
+@media (min-width: 700px) { body { --cols: 4; } }
+@media (min-width: 900px) { body { --cols: 5; } }
+
+@media (min-width: 1080px) {
+  body { --cols: 6; --pad: 1em; --gap: 0.6em; }
+
+  /* At 6 columns the set is 6x5, which is the one arrangement that can fit a
+     laptop screen whole. Cap the width at the widest 6x5 whose height still
+     clears the viewport, so it never scrolls: for a grid of width W the five
+     rows come to (W - 5*gap) / 6 / 1.4189 * 5 + 4*gap, and solving that
+     against the available height gives the expression below. Wider monitors
+     stop at 1800px so the drawings don't become billboards. */
+  .grid {
+    max-width: min(
+      1800px,
+      calc((100dvh - 2 * var(--pad) - 4 * var(--gap)) * 1.7027 + 5 * var(--gap))
+    );
+  }
 }
 
 #viewer-overlay {
